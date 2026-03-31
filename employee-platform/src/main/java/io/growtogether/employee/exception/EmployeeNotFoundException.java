@@ -1,4 +1,4 @@
-package io.upskilling.training.employee.exception;
+package io.growtogether.employee.exception;
 
 public class EmployeeNotFoundException extends RuntimeException {
     public EmployeeNotFoundException(Long id) {

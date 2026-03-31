@@ -1,4 +1,4 @@
-package io.upskilling.training.employee.entity;
+package io.growtogether.employee.entity;
 
 public enum Department {
     HR,

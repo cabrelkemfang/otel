@@ -1,8 +1,8 @@
-package io.upskilling.training.employee.service;
+package io.growtogether.employee.service;
 
-import io.upskilling.training.employee.dto.EmployeeRequest;
-import io.upskilling.training.employee.dto.EmployeeResponse;
-import io.upskilling.training.employee.dto.PaginatedResponse;
+import io.growtogether.employee.dto.EmployeeRequest;
+import io.growtogether.employee.dto.EmployeeResponse;
+import io.growtogether.employee.dto.PaginatedResponse;
 import org.springframework.data.domain.Pageable;
 
 public interface EmployeeService {

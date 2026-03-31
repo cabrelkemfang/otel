@@ -1,4 +1,4 @@
-package io.upskilling.training.employee.dto;
+package io.growtogether.employee.dto;
 
 import lombok.Builder;
 

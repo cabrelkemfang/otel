@@ -1,15 +1,18 @@
-package io.upskilling.training.employee.service.impl;
+package io.growtogether.employee.service.impl;
 
-import io.upskilling.training.employee.dto.EmployeeRequest;
-import io.upskilling.training.employee.dto.EmployeeResponse;
-import io.upskilling.training.employee.dto.PaginatedResponse;
-import io.upskilling.training.employee.entity.EmployeeEntity;
-import io.upskilling.training.employee.exception.DuplicateEmailException;
-import io.upskilling.training.employee.exception.EmployeeNotFoundException;
-import io.upskilling.training.employee.mapper.EmployeeMapper;
-import io.upskilling.training.employee.repository.EmployeeRepository;
-import io.upskilling.training.employee.service.EmployeeService;
+import io.growtogether.employee.dto.EmployeeRequest;
+import io.growtogether.employee.dto.EmployeeResponse;
+import io.growtogether.employee.dto.PaginatedResponse;
+import io.growtogether.employee.entity.EmployeeEntity;
+import io.growtogether.employee.exception.DuplicateEmailException;
+import io.growtogether.employee.exception.EmployeeNotFoundException;
+import io.growtogether.employee.mapper.EmployeeMapper;
+import io.growtogether.employee.repository.EmployeeRepository;
+import io.growtogether.employee.service.EmployeeService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.CachePut;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -35,6 +38,7 @@ public class EmployeeServiceImpl implements EmployeeService {
 
     @Override
     @Transactional(readOnly = true)
+    @Cacheable(cacheNames = "employeeById", key = "#id")
     public EmployeeResponse findById(Long id) {
         return employeeRepository.findById(id)
                 .map(employeeMapper::toResponse)
@@ -57,6 +61,7 @@ public class EmployeeServiceImpl implements EmployeeService {
 
     @Override
     @Transactional
+    @CachePut(cacheNames = "employeeById", key = "#id")
     public EmployeeResponse update(Long id, EmployeeRequest request) {
         EmployeeEntity entity = employeeRepository.findById(id)
                 .orElseThrow(() -> new EmployeeNotFoundException(id));
@@ -71,6 +76,7 @@ public class EmployeeServiceImpl implements EmployeeService {
 
     @Override
     @Transactional
+    @CacheEvict(cacheNames = "employeeById", key = "#id")
     public void delete(Long id) {
         if (!employeeRepository.existsById(id)) {
             throw new EmployeeNotFoundException(id);

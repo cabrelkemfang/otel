@@ -1,6 +1,6 @@
-package io.upskilling.training.employee.repository;
+package io.growtogether.employee.repository;
 
-import io.upskilling.training.employee.entity.EmployeeEntity;
+import io.growtogether.employee.entity.EmployeeEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 

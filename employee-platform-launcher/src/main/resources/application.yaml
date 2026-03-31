@@ -1,19 +1,72 @@
 spring:
+  application:
+    name: employee-platform-launcher
+  cache:
+    cache-names:
+      - employeeById
+    caffeine:
+      spec: maximumSize=1000,expireAfterWrite=10m
+
   datasource:
-    url: jdbc:mysql://localhost:3306/employee_db?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true&createDatabaseIfNotExist=true
+    url: jdbc:mysql://localhost:3306/otel_employee_db?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true&createDatabaseIfNotExist=true
     username: root
-    password: mysql
+    password: mysql@237
     driver-class-name: com.mysql.cj.jdbc.Driver
+    hikari:
+      pool-name: EmployeeHikariPool
+      maximum-pool-size: 20
+      minimum-idle: 5
+      connection-timeout: 3000
+      validation-timeout: 1000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+      keepalive-time: 300000
+
   jpa:
     hibernate:
       ddl-auto: validate
-    show-sql: true
+    show-sql: false
     properties:
       hibernate:
         format_sql: true
         dialect: org.hibernate.dialect.MySQLDialect
+
   flyway:
     enabled: true
     locations: classpath:db/migration
     baseline-on-migrate: true
 
+management:
+  tracing:
+    sampling:
+      probability: 1.0  # 100% for development
+  otlp:
+    metrics:
+      export:
+        url: http://localhost:4318/v1/metrics
+  opentelemetry:
+    tracing:
+      export:
+        otlp:
+          endpoint: http://localhost:4318/v1/traces
+#          endpoint: http://localhost:14250
+    logging:
+      export:
+        otlp:
+          endpoint: http://localhost:4318/v1/logs
+
+server:
+  compression:
+    enabled: true
+    min-response-size: 2KB
+    mime-types:
+      - application/json
+      - application/*+json
+      - application/xml
+      - text/html
+      - text/plain
+      - text/xml
+
+logging:
+  file:
+    path: logs

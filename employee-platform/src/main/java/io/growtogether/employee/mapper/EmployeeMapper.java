@@ -1,8 +1,8 @@
-package io.upskilling.training.employee.mapper;
+package io.growtogether.employee.mapper;
 
-import io.upskilling.training.employee.dto.EmployeeRequest;
-import io.upskilling.training.employee.dto.EmployeeResponse;
-import io.upskilling.training.employee.entity.EmployeeEntity;
+import io.growtogether.employee.dto.EmployeeRequest;
+import io.growtogether.employee.dto.EmployeeResponse;
+import io.growtogether.employee.entity.EmployeeEntity;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.MappingTarget;

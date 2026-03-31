@@ -1,4 +1,4 @@
-package io.upskilling.training.employee.exception;
+package io.growtogether.employee.exception;
 
 public class DuplicateEmailException extends RuntimeException {
     public DuplicateEmailException(String email) {

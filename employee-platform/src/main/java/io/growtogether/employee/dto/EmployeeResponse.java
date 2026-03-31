@@ -1,6 +1,6 @@
-package io.upskilling.training.employee.dto;
+package io.growtogether.employee.dto;
 
-import io.upskilling.training.employee.entity.Department;
+import io.growtogether.employee.entity.Department;
 import lombok.Builder;
 
 import java.time.LocalDateTime;
