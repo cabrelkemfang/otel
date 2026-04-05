@@ -15,7 +15,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 @RestControllerAdvice
-public class GlobalExceptionHandler {
+public class  GlobalExceptionHandler {
 
     @ExceptionHandler(EmployeeNotFoundException.class)
     public ProblemDetail handleEmployeeNotFound(EmployeeNotFoundException ex) {

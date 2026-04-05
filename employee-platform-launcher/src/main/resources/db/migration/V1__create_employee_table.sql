@@ -1,3 +1,7 @@
+CREATE DATABASE IF NOT EXISTS otel_employee_db;
+
+USE otel_employee_db;
+
 CREATE TABLE t_employee
 (
     employee_id  BIGINT AUTO_INCREMENT PRIMARY KEY,
