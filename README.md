@@ -10,6 +10,7 @@ A multi-module Spring Boot 4 REST API for employee management with built-in Open
 - [Getting Started](#getting-started)
 - [API Reference](#api-reference)
 - [Data Model](#data-model)
+- [Seed Data](#seed-data)
 - [Caching](#caching)
 - [Observability](#observability)
 - [Error Handling](#error-handling)
@@ -38,8 +39,8 @@ The launcher module depends on the platform module and produces the runnable Spr
 | Mapping | MapStruct 1.6.3 |
 | Caching | Spring Cache + Caffeine |
 | Validation | Jakarta Bean Validation |
-| Observability | OpenTelemetry (traces, metrics, logs via OTLP) |
-| Logging | Logback with async appenders + OTEL appender |
+| Observability | OpenTelemetry API (traces, metrics, logs via OTLP) |
+| Logging | Logback with OpenTelemetry appender |
 | Build | Maven Wrapper |
 
 ## Prerequisites
@@ -50,13 +51,13 @@ The launcher module depends on the platform module and produces the runnable Spr
 
 ### Database Setup
 
-Create the database before starting the application:
+The Flyway V1 migration creates the database and schema automatically:
 
 ```sql
-CREATE DATABASE otel_employee_db;
+CREATE DATABASE IF NOT EXISTS otel_employee_db;
 ```
 
-Flyway will handle schema creation automatically on startup.
+The JDBC URL is also configured with `createDatabaseIfNotExist=true`, so no manual setup is required.
 
 ## Getting Started
 
@@ -206,6 +207,23 @@ DELETE /api/employees/{id}
 
 Schema is managed by Flyway migrations in `employee-platform-launcher/src/main/resources/db/migration/`.
 
+### Migrations
+
+| Version | File | Description |
+|---------|------|-------------|
+| V1 | `V1__create_employee_table.sql` | Creates the `otel_employee_db` database and `t_employee` table |
+| V2 | `V2__insert_sample_employees.sql` | Seeds three sample employees |
+
+## Seed Data
+
+The V2 migration inserts sample employees so the API is usable immediately after startup:
+
+| Name | Email | Department |
+|------|-------|------------|
+| Alice Johnson | alice.johnson@growtogether.io | FINANCE |
+| Bob Smith | bob.smith@growtogether.io | OPERATIONS |
+| Carol Williams | carol.williams@growtogether.io | HR |
+
 ## Caching
 
 Employee lookups by ID are cached using Caffeine:
@@ -229,26 +247,36 @@ The application exports telemetry data via OTLP to `localhost:4318`:
 
 Tracing is configured with **100% sampling** by default.
 
-### Correlation IDs
+### Trace Body Capture
 
-Every request is tagged with a correlation ID:
+The `ProductionTraceBodyFilter` uses the **OpenTelemetry API directly** (`io.opentelemetry.api.trace.Span`) to attach request and response bodies as span attributes, making them searchable in **Grafana Tempo**.
 
-- The `X-Correlation-Id` header is read from the incoming request or derived from the active OpenTelemetry trace ID
-- If neither exists, a UUID is generated
-- The correlation ID is set in the MDC and returned in the response header
+| Span Attribute | Description |
+|----------------|-------------|
+| `http.request.body` | Sanitized and truncated request body |
+| `http.response.body` | Sanitized and truncated response body |
+| `http.response.body.size` | Raw response body size in bytes |
+
+**Safety features:**
+
+- **Sensitive data masking** — JSON values for keys `password`, `token`, `secret`, and `authorization` are replaced with `******`
+- **Truncation** — Bodies larger than 2 KB are truncated to avoid excessive Tempo storage costs
+- **Error resilience** — Capture failures are recorded as `*.error` attributes instead of propagating exceptions
+
+### Trace ID Header
+
+The same filter sets the `X-Trace-Id` response header on every request, allowing clients to correlate responses with traces in Tempo.
 
 ### Logging
 
-Log output includes trace and correlation context:
+Log output is sent to two appenders:
 
-```
-2026-04-02 10:30:00.123 [http-nio-8080-exec-1] INFO  c.e.EmployeeController [traceId=abc123 correlationId=def456] - Processing request
-```
+| Appender | Description |
+|----------|-------------|
+| **CONSOLE** | Spring Boot default console output (via `base.xml` include) |
+| **OTEL** | Forwards structured logs to the OpenTelemetry Collector with MDC, code attributes, and markers |
 
-Appenders:
-- **Console** — async, 512-entry queue
-- **File** — async rolling file at `logs/employee-platform.log` (10 MB rotation, 14-day retention, 1 GB cap)
-- **OTEL** — forwards logs to the OpenTelemetry Collector
+Log output includes trace context automatically via Spring Boot's default log pattern.
 
 ## Error Handling
 
@@ -282,10 +310,12 @@ otel-employee/
 │       ├── java/.../launcher/
 │       │   ├── EmployeeApplication.java # Boot entrypoint
 │       │   ├── exception/               # Global exception handler
-│       │   └── filter/                  # Correlation ID filter
+│       │   └── filter/                  # Tracing filter (body capture + trace ID header)
 │       └── resources/
 │           ├── application.yaml         # Application config
 │           ├── logback-spring.xml       # Logging config
 │           └── db/migration/            # Flyway SQL migrations
+│               ├── V1__create_employee_table.sql
+│               └── V2__insert_sample_employees.sql
 └── logs/                                # Runtime log output
 ```
