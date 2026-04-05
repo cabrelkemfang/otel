@@ -1,0 +1,319 @@
+openapi: 3.0.3
+info:
+  title: Employee Platform API
+  description: REST API for managing employees in the Employee Platform.
+  version: 0.0.1-SNAPSHOT
+  contact:
+    name: GrowTogether
+
+servers:
+  - url: http://localhost:8080
+    description: Local development server
+
+tags:
+  - name: Employees
+    description: Employee CRUD operations
+
+paths:
+  /api/employees:
+    post:
+      tags:
+        - Employees
+      summary: Create a new employee
+      operationId: createEmployee
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EmployeeRequest'
+      responses:
+        '201':
+          description: Employee created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmployeeResponse'
+        '400':
+          description: Validation failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationProblemDetail'
+        '409':
+          description: Duplicate email conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+
+    get:
+      tags:
+        - Employees
+      summary: List employees with pagination
+      operationId: findAllEmployees
+      parameters:
+        - name: page
+          in: query
+          description: Page number (zero-based)
+          required: false
+          schema:
+            type: integer
+            default: 0
+            minimum: 0
+        - name: size
+          in: query
+          description: Page size
+          required: false
+          schema:
+            type: integer
+            default: 10
+            minimum: 1
+            maximum: 100
+        - name: sortBy
+          in: query
+          description: Field to sort by
+          required: false
+          schema:
+            type: string
+            default: createdAt
+        - name: direction
+          in: query
+          description: Sort direction
+          required: false
+          schema:
+            type: string
+            default: asc
+            enum:
+              - asc
+              - desc
+      responses:
+        '200':
+          description: Paginated list of employees
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedEmployeeResponse'
+
+  /api/employees/{id}:
+    get:
+      tags:
+        - Employees
+      summary: Find an employee by ID
+      operationId: findEmployeeById
+      parameters:
+        - $ref: '#/components/parameters/EmployeeId'
+      responses:
+        '200':
+          description: Employee found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmployeeResponse'
+        '404':
+          description: Employee not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+
+    put:
+      tags:
+        - Employees
+      summary: Update an existing employee
+      operationId: updateEmployee
+      parameters:
+        - $ref: '#/components/parameters/EmployeeId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EmployeeRequest'
+      responses:
+        '200':
+          description: Employee updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmployeeResponse'
+        '400':
+          description: Validation failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationProblemDetail'
+        '404':
+          description: Employee not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+        '409':
+          description: Duplicate email conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+
+    delete:
+      tags:
+        - Employees
+      summary: Delete an employee by ID
+      operationId: deleteEmployee
+      parameters:
+        - $ref: '#/components/parameters/EmployeeId'
+      responses:
+        '204':
+          description: Employee deleted successfully
+        '404':
+          description: Employee not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+
+components:
+  parameters:
+    EmployeeId:
+      name: id
+      in: path
+      description: Employee ID
+      required: true
+      schema:
+        type: integer
+        format: int64
+
+  schemas:
+    Department:
+      type: string
+      enum:
+        - HR
+        - IT
+        - FINANCE
+        - OPERATIONS
+        - MARKETING
+        - LEGAL
+
+    EmployeeRequest:
+      type: object
+      required:
+        - firstName
+        - lastName
+        - email
+        - phoneNumber
+        - department
+      properties:
+        firstName:
+          type: string
+          description: Employee first name
+          example: John
+        lastName:
+          type: string
+          description: Employee last name
+          example: Doe
+        email:
+          type: string
+          format: email
+          description: Employee email address
+          example: john.doe@example.com
+        phoneNumber:
+          type: string
+          description: Employee phone number
+          example: "+1234567890"
+        department:
+          $ref: '#/components/schemas/Department'
+
+    EmployeeResponse:
+      type: object
+      properties:
+        employeeId:
+          type: integer
+          format: int64
+          description: Unique employee identifier
+          example: 1
+        firstName:
+          type: string
+          description: Employee first name
+          example: John
+        lastName:
+          type: string
+          description: Employee last name
+          example: Doe
+        phoneNumber:
+          type: string
+          description: Employee phone number
+          example: "+1234567890"
+        email:
+          type: string
+          format: email
+          description: Employee email address
+          example: john.doe@example.com
+        department:
+          $ref: '#/components/schemas/Department'
+        createdAt:
+          type: string
+          format: date-time
+          description: Timestamp when the employee was created
+          example: "2026-04-05T10:30:00"
+
+    PaginatedEmployeeResponse:
+      type: object
+      properties:
+        response:
+          type: array
+          items:
+            $ref: '#/components/schemas/EmployeeResponse'
+        totalElements:
+          type: integer
+          format: int64
+          description: Total number of employees
+          example: 50
+        totalPages:
+          type: integer
+          description: Total number of pages
+          example: 5
+        currentPage:
+          type: integer
+          description: Current page number (zero-based)
+          example: 0
+        pageSize:
+          type: integer
+          description: Number of items per page
+          example: 10
+
+    ProblemDetail:
+      type: object
+      description: RFC 9457 Problem Detail
+      properties:
+        type:
+          type: string
+          format: uri
+          description: A URI reference that identifies the problem type
+        title:
+          type: string
+          description: A short human-readable summary of the problem type
+        status:
+          type: integer
+          description: The HTTP status code
+        detail:
+          type: string
+          description: A human-readable explanation specific to this occurrence
+        instance:
+          type: string
+          format: uri
+          description: A URI reference that identifies the specific occurrence
+
+    ValidationProblemDetail:
+      allOf:
+        - $ref: '#/components/schemas/ProblemDetail'
+        - type: object
+          properties:
+            errors:
+              type: object
+              additionalProperties:
+                type: string
+              description: Map of field names to validation error messages
+              example:
+                email: "must not be blank"
+                firstName: "must not be blank"
