@@ -9,6 +9,6 @@
         <version>${revision}</version>
     </parent>
 
-    <artifactId>employee-platform</artifactId>
+    <artifactId>employee-service</artifactId>
 
 </project>

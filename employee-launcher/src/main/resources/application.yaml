@@ -1,6 +1,6 @@
 spring:
   application:
-    name: employee-platform-launcher
+    name: otel-employee-app
   cache:
     cache-names:
       - employeeById
@@ -8,9 +8,9 @@ spring:
       spec: maximumSize=1000,expireAfterWrite=10m
 
   datasource:
-    url: jdbc:mysql://localhost:3306/otel_employee_db?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true&createDatabaseIfNotExist=true
-    username: root
-    password: mysql@237
+    url: ${SPRING_DATASOURCE_URL}
+    username: ${SPRING_DATASOURCE_USERNAME}
+    password: ${SPRING_DATASOURCE_PASSWORD}
     driver-class-name: com.mysql.cj.jdbc.Driver
     hikari:
       pool-name: EmployeeHikariPool
@@ -35,24 +35,6 @@ spring:
     enabled: true
     locations: classpath:db/migration
     baseline-on-migrate: true
-
-management:
-  tracing:
-    sampling:
-      probability: 1.0  # 100% for development
-  otlp:
-    metrics:
-      export:
-        url: http://localhost:4318/v1/metrics
-  opentelemetry:
-    tracing:
-      export:
-        otlp:
-          endpoint: http://localhost:4318/v1/traces
-    logging:
-      export:
-        otlp:
-          endpoint: http://localhost:4318/v1/logs
 
 server:
   compression:
