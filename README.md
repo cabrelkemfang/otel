@@ -81,17 +81,39 @@ Flyway will handle schema creation automatically on startup.
 ### Run
 
 ```bash
-java -jar employee-platform-launcher/target/employee-platform-launcher-0.0.1-SNAPSHOT.jar
+java -jar employee-launcher/target/otel-employee.jar
 ```
 
 > **Note:** Do not use `spring-boot:run` from the root — the root module is an aggregator POM. Always build from the root and run the launcher JAR directly.
+
+### Run with OpenTelemetry Java Agent
+
+To run with the bundled OpenTelemetry Java agent (exports telemetry to logging instead of a collector — useful for local development and debugging):
+
+```bash
+java -javaagent:./employee-launcher/target/agent/opentelemetry-javaagent.jar \
+  -Dotel.traces.exporter=logging \
+  -Dotel.metrics.exporter=logging \
+  -Dotel.logs.exporter=logging \
+  -jar employee-launcher/target/otel-employee.jar
+```
+
+#### IntelliJ IDEA — VM Options
+
+Open **Run/Debug Configurations**, select your configuration, and paste the following into the **VM options** field:
+
+```
+-javaagent:./employee-launcher/target/agent/opentelemetry-javaagent.jar -Dotel.traces.exporter=logging -Dotel.metrics.exporter=logging -Dotel.logs.exporter=logging
+```
+
+> **Tip:** The agent JAR is bundled under `employee-launcher/target/agent/opentelemetry-javaagent.jar` after running `./mvnw -q -DskipTests package`.
 
 ### Configuration Overrides
 
 Override defaults via environment variables or system properties:
 
 ```bash
-java -jar employee-platform-launcher/target/employee-platform-launcher-0.0.1-SNAPSHOT.jar \
+java -jar employee-launcher/target/otel-employee.jar \
   --spring.datasource.url=jdbc:mysql://host:3306/mydb \
   --spring.datasource.username=myuser \
   --spring.datasource.password=mypass

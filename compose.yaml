@@ -1,0 +1,53 @@
+services:
+
+  # ── MySQL ────────────────────────────────────────────────────────────────────
+  mysql:
+    image: mysql:8.0
+    container_name: otel-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: mysql
+      MYSQL_DATABASE: otel_employee_db
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-pmysql"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - otel-net
+
+  # ── Spring Boot application ───────────────────────────────────────────────────
+  otel-employee-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: otel-employee-app
+    environment:
+      SPRING_DATASOURCE_URL: "jdbc:mysql://mysql:3306/otel_employee_db?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true&createDatabaseIfNotExist=true"
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: mysql
+      OTEL_TRACES_EXPORTER: logging
+      OTEL_METRICS_EXPORTER: logging
+      OTEL_LOGS_EXPORTER: logging
+    ports:
+      - "8080:8080"
+    volumes:
+      - app-logs:/app/logs
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - otel-net
+
+volumes:
+  mysql-data:
+  app-logs:
+
+networks:
+  otel-net:
+    driver: bridge
+
