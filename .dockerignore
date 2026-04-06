@@ -1,0 +1,24 @@
+# Build outputs
+**/target/
+**/build/
+
+# Logs
+logs/
+
+# IDE and OS files
+.idea/
+*.iml
+.DS_Store
+Thumbs.db
+
+# Git
+.git/
+.gitignore
+
+# Docker files themselves (avoid recursive COPY if ever needed)
+Dockerfile
+docker-compose*.yml
+docker/
+
+# Maven wrapper artifacts (only keep the scripts)
+!.mvn/

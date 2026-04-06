@@ -1,0 +1,39 @@
+services:
+
+  # ── Grafana LGTM (Loki + Grafana + Tempo + Mimir bundled) ─────────────────
+  # Grafana UI: http://localhost:3000  (admin / admin)
+  lgtm:
+    image: grafana/otel-lgtm:latest
+    container_name: otel-lgtm
+    ports:
+      - "3000:3000"   # Grafana UI
+      - "4317:4317"   # OTLP gRPC (direct access from host)
+      - "4318:4318"   # OTLP HTTP (direct access from host)
+    volumes:
+      - lgtm-data:/data
+    networks:
+      - otel-net
+
+  # ── OpenTelemetry Collector ─────────────────────────────────────────────
+  # Receives OTLP from the app and forwards everything to lgtm
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.123.0
+    container_name: otel-collector
+    command: ["--config=/etc/otel/config.yaml"]
+    volumes:
+      - ./docker/otel-collector-config.yaml:/etc/otel/config.yaml:ro
+    ports:
+      - "4319:4318"   # OTLP HTTP (host port 4319 → container 4318)
+      - "4316:4317"   # OTLP gRPC (host port 4316 → container 4317)
+    depends_on:
+      - lgtm
+    networks:
+      - otel-net
+
+volumes:
+  lgtm-data:
+
+networks:
+  otel-net:
+    name: otel-net
+    driver: bridge
