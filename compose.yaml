@@ -32,7 +32,8 @@ services:
       SPRING_DATASOURCE_PASSWORD: mysql
       OTEL_TRACES_EXPORTER: logging
       OTEL_METRICS_EXPORTER: logging
-      OTEL_LOGS_EXPORTER: logging
+      OTEL_LOGS_EXPORTER: otlp
+      OTEL_EXPORTER_OTLP_ENDPOINT: "http://127.0.0.1:4317"
     ports:
       - "8080:8080"
     volumes:
