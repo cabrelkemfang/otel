@@ -17,8 +17,8 @@
     <description>otel-employee</description>
 
     <modules>
-        <module>employee-platform</module>
-        <module>employee-platform-launcher</module>
+        <module>employee-service</module>
+        <module>employee-launcher</module>
     </modules>
 
     <properties>
@@ -36,7 +36,7 @@
         <dependencies>
             <dependency>
                 <groupId>io.growtogether</groupId>
-                <artifactId>employee-platform</artifactId>
+                <artifactId>employee-service</artifactId>
                 <version>${revision}</version>
             </dependency>
             <dependency>
@@ -68,6 +68,14 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-webmvc</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-opentelemetry</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.opentelemetry.instrumentation</groupId>
+            <artifactId>opentelemetry-logback-appender-1.0</artifactId>
         </dependency>
         <dependency>
             <groupId>org.projectlombok</groupId>
