@@ -88,13 +88,11 @@ java -jar employee-launcher/target/otel-employee.jar
 
 ### Run with OpenTelemetry Java Agent
 
-To run with the bundled OpenTelemetry Java agent (exports telemetry to logging instead of a collector — useful for local development and debugging):
+To run with the bundled OpenTelemetry Java agent (exports telemetry via OTLP to the collector running on `localhost:4318`):
 
 ```bash
 java -javaagent:./employee-launcher/target/agent/opentelemetry-javaagent.jar \
-  -Dotel.traces.exporter=logging \
-  -Dotel.metrics.exporter=logging \
-  -Dotel.logs.exporter=logging \
+  -Dotel.exporter.otlp.endpoint=http://localhost:4318 \
   -jar employee-launcher/target/otel-employee.jar
 ```
 
@@ -103,10 +101,38 @@ java -javaagent:./employee-launcher/target/agent/opentelemetry-javaagent.jar \
 Open **Run/Debug Configurations**, select your configuration, and paste the following into the **VM options** field:
 
 ```
--javaagent:./employee-launcher/target/agent/opentelemetry-javaagent.jar -Dotel.traces.exporter=logging -Dotel.metrics.exporter=logging -Dotel.logs.exporter=logging
+-javaagent:./employee-launcher/target/agent/opentelemetry-javaagent.jar -Dotel.exporter.otlp.endpoint=http://localhost:4318
 ```
 
 > **Tip:** The agent JAR is bundled under `employee-launcher/target/agent/opentelemetry-javaagent.jar` after running `./mvnw -q -DskipTests package`.
+
+### Run Observability Stack (Grafana LGTM)
+
+Start the Grafana LGTM stack (Loki + Grafana + Tempo + Mimir) before running the application:
+
+```bash
+podman compose -f otel-docker-compose.yml up -d
+```
+
+Or with Docker:
+
+```bash
+docker compose -f otel-docker-compose.yml up -d
+```
+
+| Service | URL |
+|---------|-----|
+| Grafana UI | http://localhost:3001 (admin / admin) |
+| OTLP gRPC | `localhost:4317` |
+| OTLP HTTP | `localhost:4320` |
+
+> **Note:** The OTLP HTTP port is `4320` (mapped from container `4318`). Update `-Dotel.exporter.otlp.endpoint=http://localhost:4320` when sending directly to LGTM.
+
+**Stop the stack:**
+
+```bash
+podman compose -f otel-docker-compose.yml down
+```
 
 ### Configuration Overrides
 

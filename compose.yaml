@@ -30,10 +30,10 @@ services:
       SPRING_DATASOURCE_URL: "jdbc:mysql://mysql:3306/otel_employee_db?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true&createDatabaseIfNotExist=true"
       SPRING_DATASOURCE_USERNAME: root
       SPRING_DATASOURCE_PASSWORD: mysql
-      OTEL_TRACES_EXPORTER: logging
-      OTEL_METRICS_EXPORTER: logging
+      OTEL_TRACES_EXPORTER: otlp
+      OTEL_METRICS_EXPORTER: otlp
       OTEL_LOGS_EXPORTER: otlp
-      OTEL_EXPORTER_OTLP_ENDPOINT: "http://127.0.0.1:4317"
+      OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector:4320"
     ports:
       - "8080:8080"
     volumes:
@@ -41,6 +41,8 @@ services:
     depends_on:
       mysql:
         condition: service_healthy
+      otel-collector:
+        condition: service_started
     networks:
       - otel-net
 
@@ -51,4 +53,3 @@ volumes:
 networks:
   otel-net:
     driver: bridge
-
