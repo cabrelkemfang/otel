@@ -8,15 +8,27 @@ Use these instructions when making changes in this repository. Keep changes mini
 - Domain and API module: [employee-platform](employee-platform).
 - Runnable application module: [employee-platform-launcher](employee-platform-launcher).
 
+## Technology Stack
+- **Java 21** / **Spring Boot 4.0.5** — see root [pom.xml](pom.xml).
+- **MapStruct 1.6.3** for compile-time entity/DTO mapping.
+- **Caffeine** for in-memory caching; cache names: `employeeById`.
+- **Flyway + MySQL 8.0+** for schema management; JPA in `validate` mode (no auto DDL).
+- **OpenTelemetry (OTLP/HTTP)** + **Grafana LGTM** for traces, metrics, and logs.
+
 ## Build, Test, and Run
 - Build all modules from repository root:
-  - ./mvnw -q -DskipTests compile
+  - `./mvnw -q -DskipTests compile`
 - Run tests from repository root:
-  - ./mvnw -q test
+  - `./mvnw -q test`
 - Build runnable artifact:
-  - ./mvnw -q -DskipTests package
+  - `./mvnw -q -DskipTests package`
 - Run application jar:
-  - java -jar employee-platform-launcher/target/employee-platform-launcher-0.0.1-SNAPSHOT.jar
+  - `java -jar employee-platform-launcher/target/employee-platform-launcher-0.0.1-SNAPSHOT.jar`
+- Start full observability stack (Grafana LGTM + OTel Collector):
+  - `docker compose -f otel-docker-compose.yml up -d`
+  - Grafana UI: http://localhost:3000 (admin/admin)
+- Start everything including MySQL and the app:
+  - `docker compose -f otel-docker-compose.yml -f docker-compose.yml up -d`
 
 Notes:
 - Java 21 is required (see [pom.xml](pom.xml)).
@@ -50,6 +62,11 @@ Notes:
   - [employee-platform-launcher/src/main/java/io/growtogether/employee/launcher/exception/GlobalExceptionHandler.java](employee-platform-launcher/src/main/java/io/growtogether/employee/launcher/exception/GlobalExceptionHandler.java)
 - Use MapStruct for entity/DTO mapping and keep identity/audit fields ignored during create/update operations:
   - [employee-platform/src/main/java/io/growtogether/employee/mapper/EmployeeMapper.java](employee-platform/src/main/java/io/growtogether/employee/mapper/EmployeeMapper.java)
+- Apply caching annotations on the service implementation—not the interface—using the `employeeById` cache:
+  - `@Cacheable(cacheNames="employeeById", key="#id")` on `findById()`
+  - `@CachePut(cacheNames="employeeById", key="#id")` on `update()` to refresh without eviction
+  - `@CacheEvict(cacheNames="employeeById", key="#id")` on `delete()`
+- The `EmployeeEntity.department` field is a `@Enumerated(EnumType.STRING)` column; valid values are: `HR`, `IT`, `FINANCE`, `OPERATIONS`, `MARKETING`, `LEGAL`.
 
 ## Data and Migration Rules
 - Keep DDL changes in Flyway migrations only; do not depend on automatic schema creation.
@@ -58,6 +75,7 @@ Notes:
 
 ## Observability and Logging Rules
 - Preserve correlation and trace propagation behavior in [employee-platform-launcher/src/main/java/io/growtogether/employee/launcher/filter/CorrelationIdFilter.java](employee-platform-launcher/src/main/java/io/growtogether/employee/launcher/filter/CorrelationIdFilter.java).
+- `ProductionTraceBodyFilter` captures request/response bodies as span attributes (max 2 KB, masked fields: `password`, `token`, `secret`, `authorization`) and sets `X-Trace-Id` on responses — preserve this behavior in [employee-platform-launcher/src/main/java/io/growtogether/employee/launcher/filter/ProductionTraceBodyFilter.java](employee-platform-launcher/src/main/java/io/growtogether/employee/launcher/filter/ProductionTraceBodyFilter.java).
 - Preserve log pattern fields for trace and correlation IDs in [employee-platform-launcher/src/main/resources/logback-spring.xml](employee-platform-launcher/src/main/resources/logback-spring.xml).
 - If changing logging appenders, verify no duplicated console output is introduced.
 
