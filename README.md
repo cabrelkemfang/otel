@@ -8,6 +8,7 @@ A multi-module Spring Boot 4 REST API for employee management with built-in Open
 - [Tech Stack](#tech-stack)
 - [Prerequisites](#prerequisites)
 - [Getting Started](#getting-started)
+- [Docker](#docker)
 - [API Reference](#api-reference)
 - [Data Model](#data-model)
 - [Caching](#caching)
@@ -21,10 +22,10 @@ The project follows a multi-module Maven layout with clear separation of concern
 
 | Module | Purpose |
 |--------|---------|
-| **employee-platform** | Domain logic — entities, DTOs, controllers, services, repositories, and mappers |
-| **employee-platform-launcher** | Runtime concerns — Boot entrypoint, configuration, Flyway migrations, exception translation, filters, and logging |
+| **employee-service** | Domain logic — entities, DTOs, controllers, services, repositories, and mappers |
+| **employee-launcher** | Runtime concerns — Boot entrypoint, configuration, Flyway migrations, exception translation, filters, and logging |
 
-The launcher module depends on the platform module and produces the runnable Spring Boot JAR.
+The launcher module depends on the service module and produces the runnable Spring Boot JAR (`otel-employee.jar`).
 
 ## Tech Stack
 
@@ -46,11 +47,11 @@ The launcher module depends on the platform module and produces the runnable Spr
 
 - **Java 21** or later
 - **MySQL** running on `localhost:3306`
-- **OpenTelemetry Collector** (optional) listening on `localhost:4318` for traces, metrics, and logs
+- **OTLP backend** (optional) — see [Observability](#observability) for the local Grafana LGTM stack
 
 ### Database Setup
 
-Create the database before starting the application:
+The `application-local` profile creates the database automatically via the JDBC URL parameter. For other environments, create it manually:
 
 ```sql
 CREATE DATABASE otel_employee_db;
@@ -78,24 +79,64 @@ Flyway will handle schema creation automatically on startup.
 ./mvnw -q -DskipTests package
 ```
 
-### Run
+### Run Locally
+
+The `local` profile provides pre-configured values for the datasource and OTLP endpoints (pointing to the LGTM stack on port `4320`):
 
 ```bash
-java -jar employee-platform-launcher/target/employee-platform-launcher-0.0.1-SNAPSHOT.jar
+java -Dspring.profiles.active=local \
+  -jar employee-launcher/target/otel-employee.jar
 ```
 
 > **Note:** Do not use `spring-boot:run` from the root — the root module is an aggregator POM. Always build from the root and run the launcher JAR directly.
 
-### Configuration Overrides
+### Run with Environment Variables
 
-Override defaults via environment variables or system properties:
+The default `application.yaml` requires the following environment variables:
+
+| Variable | Example |
+|----------|---------|
+| `SPRING_DATASOURCE_URL` | `jdbc:mysql://localhost:3306/otel_employee_db?...` |
+| `SPRING_DATASOURCE_USERNAME` | `root` |
+| `SPRING_DATASOURCE_PASSWORD` | `mysql` |
+| `MANAGEMENT_OTLP_METRICS_EXPORT_URL` | `http://localhost:4320/v1/metrics` |
+| `MANAGEMENT_OPENTELEMETRY_TRACING_EXPORT_OTLP_ENDPOINT` | `http://localhost:4320/v1/traces` |
+| `MANAGEMENT_OPENTELEMETRY_LOGGING_EXPORT_OTLP_ENDPOINT` | `http://localhost:4320/v1/logs` |
 
 ```bash
-java -jar employee-platform-launcher/target/employee-platform-launcher-0.0.1-SNAPSHOT.jar \
-  --spring.datasource.url=jdbc:mysql://host:3306/mydb \
-  --spring.datasource.username=myuser \
-  --spring.datasource.password=mypass
+SPRING_DATASOURCE_URL=jdbc:mysql://localhost:3306/otel_employee_db \
+SPRING_DATASOURCE_USERNAME=root \
+SPRING_DATASOURCE_PASSWORD=mysql \
+java -jar employee-launcher/target/otel-employee.jar
 ```
+
+## Docker
+
+Two Docker Compose files are provided, designed to be started together.
+
+### 1. Start the Grafana LGTM observability stack
+
+```bash
+docker compose -f otel-docker-compose.yml up -d
+```
+
+This starts the `grafana/otel-lgtm` all-in-one image (Loki + Grafana + Tempo + Mimir):
+
+| Service | URL |
+|---------|-----|
+| Grafana UI | http://localhost:3001 (admin / admin) |
+| OTLP gRPC | `localhost:4317` |
+| OTLP HTTP | `localhost:4320` (mapped from internal `4318`) |
+
+### 2. Start MySQL and the application
+
+```bash
+docker compose up -d
+```
+
+This starts MySQL and the Spring Boot application. The app connects to MySQL and sends telemetry to the LGTM stack over the shared `otel-net` network.
+
+> The `otel-net` network is created by `otel-docker-compose.yml`, so start that first.
 
 ## API Reference
 
@@ -219,36 +260,26 @@ Employee lookups by ID are cached using Caffeine:
 
 ### OpenTelemetry
 
-The application exports telemetry data via OTLP to `localhost:4318`:
+The application exports all three telemetry signals via OTLP. Endpoints are configured via environment variables (see [Getting Started](#getting-started)):
 
-| Signal | Endpoint |
+| Signal | Property |
 |--------|----------|
-| Traces | `http://localhost:4318/v1/traces` |
-| Metrics | `http://localhost:4318/v1/metrics` |
-| Logs | `http://localhost:4318/v1/logs` |
+| Traces | `management.opentelemetry.tracing.export.otlp.endpoint` |
+| Metrics | `management.otlp.metrics.export.url` |
+| Logs | `management.opentelemetry.logging.export.otlp.endpoint` |
 
-Tracing is configured with **100% sampling** by default.
+In the local profile all three point to the Grafana LGTM stack at `http://localhost:4320/v1/{signal}`.
 
-### Correlation IDs
-
-Every request is tagged with a correlation ID:
-
-- The `X-Correlation-Id` header is read from the incoming request or derived from the active OpenTelemetry trace ID
-- If neither exists, a UUID is generated
-- The correlation ID is set in the MDC and returned in the response header
+Tracing is configured with **100% sampling** by default (suitable for development; lower this in production).
 
 ### Logging
 
-Log output includes trace and correlation context:
-
-```
-2026-04-02 10:30:00.123 [http-nio-8080-exec-1] INFO  c.e.EmployeeController [traceId=abc123 correlationId=def456] - Processing request
-```
+Log output includes trace context fields (`traceId`, `spanId`) automatically when Micrometer Tracing is active.
 
 Appenders:
 - **Console** — async, 512-entry queue
-- **File** — async rolling file at `logs/employee-platform.log` (10 MB rotation, 14-day retention, 1 GB cap)
-- **OTEL** — forwards logs to the OpenTelemetry Collector
+- **File** — async rolling file at `logs/` (10 MB rotation, 14-day retention, 1 GB cap)
+- **OTEL** — forwards logs to the OpenTelemetry-compatible backend via the `OpenTelemetryAppender`
 
 ## Error Handling
 
@@ -265,7 +296,10 @@ All errors are returned as RFC 9457 `ProblemDetail` responses:
 ```
 otel-employee/
 ├── pom.xml                              # Aggregator POM
-├── employee-platform/                   # Domain & API module
+├── docker-compose.yml                   # MySQL + application stack
+├── otel-docker-compose.yml              # Grafana LGTM observability stack
+├── Dockerfile                           # Application image
+├── employee-service/                    # Domain & API module
 │   ├── pom.xml
 │   └── src/main/java/.../employee/
 │       ├── configuration/               # JPA, component scan config
@@ -276,16 +310,19 @@ otel-employee/
 │       ├── mapper/                      # MapStruct mappers
 │       ├── repository/                  # Spring Data repositories
 │       └── service/                     # Service interfaces & impls
-├── employee-platform-launcher/          # Runtime module
+├── employee-launcher/                   # Runtime module
 │   ├── pom.xml
 │   └── src/main/
 │       ├── java/.../launcher/
 │       │   ├── EmployeeApplication.java # Boot entrypoint
-│       │   ├── exception/               # Global exception handler
-│       │   └── filter/                  # Correlation ID filter
+│       │   ├── configuration/           # Runtime configuration beans
+│       │   ├── exception/               # Global exception handler (ProblemDetail)
+│       │   └── filter/                  # Servlet filters (trace body capture)
 │       └── resources/
-│           ├── application.yaml         # Application config
-│           ├── logback-spring.xml       # Logging config
+│           ├── application.yaml         # Base config (env-var driven)
+│           ├── application-local.yaml   # Local development overrides
+│           ├── application-test.yaml    # Test overrides
+│           ├── logback-spring.xml       # Logging config (console + file + OTEL)
 │           └── db/migration/            # Flyway SQL migrations
 └── logs/                                # Runtime log output
 ```
