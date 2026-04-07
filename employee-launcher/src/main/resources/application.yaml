@@ -1,6 +1,6 @@
 spring:
   application:
-    name: employee-platform-launcher
+    name: employee-launcher
   cache:
     cache-names:
       - employeeById
