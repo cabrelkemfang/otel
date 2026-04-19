@@ -1,0 +1,9 @@
+{
+  "name": "otel-employee-tools",
+  "description": "Clean Code, SOLID, Security Audit, code-review, design-patterns, git-commit, and skill-creator skills for the otel-employee Spring Boot project.",
+  "version": "1.0.0",
+  "author": {
+    "name": "growtogether"
+  },
+  "skills": "skills/"
+}
