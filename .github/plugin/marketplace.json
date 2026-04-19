@@ -1,0 +1,25 @@
+{
+  "name": "otel test marketplace",
+  "owner": {
+    "name": "cabrel kemfang",
+    "email": "plugins@example.com"
+  },
+  "metadata": {
+    "description": "Curated plugins for our team",
+    "version": "1.0.0"
+  },
+  "plugins": [
+    {
+      "name": "clean-code",
+      "description": "Clean code",
+      "version": "2.1.0",
+      "source": "./otel-employee-plugin/skills/clean-code"
+    },
+    {
+      "name": "code-review",
+      "description": "code-review",
+      "version": "1.0.0",
+      "source": "./otel-employee-plugin/skills/code-review"
+    }
+  ]
+}
